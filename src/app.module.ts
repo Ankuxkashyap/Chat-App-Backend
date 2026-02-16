@@ -8,10 +8,13 @@ import { SocketGateway } from './socket.gateway';
 import { UserController } from './modules/user/user.controller';
 import { UserModule } from './modules/user/user.module';
 import { ConfigModule } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+     PassportModule,
     SocketModule, UserModule, AuthModule, PrismaModule],
   controllers: [AppController, UserController],
   providers: [AppService, SocketGateway],

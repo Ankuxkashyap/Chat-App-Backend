@@ -20,6 +20,7 @@ model User {
   password          String
   username          String   @unique
   receivedRequests  FriendRequest[] @relation("receivedRequests")
+  sentRequests      FriendRequest[] @relation("sentRequests")
   friendshipsOne    Friendship[] @relation("userOne")
   friendshipsTwo    Friendship[] @relation("userTwo")
   createdAt         DateTime @default(now())
@@ -29,11 +30,15 @@ model FriendRequest {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
 
   senderId   String   @db.ObjectId
-
-  receiver   User     @relation("receivedRequests", fields: [receiverId], references: [id])
   receiverId String   @db.ObjectId
 
+  sender     User     @relation("sentRequests", fields: [senderId], references: [id])
+  receiver   User     @relation("receivedRequests", fields: [receiverId], references: [id])
+
+  status     FriendRequestStatus @default(PENDING)
+
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([senderId, receiverId])
 }
@@ -50,4 +55,10 @@ model Friendship {
   createdAt DateTime @default(now())
 
   @@unique([userOneId, userTwoId])
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }

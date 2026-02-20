@@ -10,13 +10,12 @@ import { UserModule } from './modules/user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { FriendshipModule } from './modules/friendship/friendship.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-     PassportModule,
-    SocketModule, UserModule, AuthModule, PrismaModule, FriendshipModule],
+    PassportModule,
+    SocketModule, UserModule, AuthModule, PrismaModule],
   controllers: [AppController, UserController],
   providers: [AppService, SocketGateway],
 })

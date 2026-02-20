@@ -1,7 +1,7 @@
-import { Controller, Post, UseGuards, Req, Body,Get } from '@nestjs/common';
+import { Controller, Post, UseGuards, Req, Body,Get, Param } from '@nestjs/common';
 import { FriendshipService } from './friendship.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { use } from 'passport';
+import type { AuthenticatedRequest } from 'src/types/auth';
 
 @Controller('friendship')
 export class FriendshipController {
@@ -20,8 +20,41 @@ export class FriendshipController {
 
     @UseGuards(AuthGuard)
     @Get('')
-    async getFriends(@Req() req: any) {
+    async getFriends(@Req() req: AuthenticatedRequest) {
         const userId = req.user.id;
         return this.friendshipService.getFriends(userId);
+    }
+
+    @UseGuards(AuthGuard)
+    @Get('requests')
+    async getFriendRequests(@Req() req: AuthenticatedRequest) {
+        const userId = req.user.id;
+        return this.friendshipService.getFrindRequests(userId);
+    }
+
+    @UseGuards(AuthGuard)
+    @Post('request')
+    async sentRequest(@Req() req: AuthenticatedRequest, @Body('receiverId') receiverId: string) {
+        const senderId = req.user.id;
+        return this.friendshipService.sentRequest(senderId, receiverId);
+    }
+
+    @UseGuards(AuthGuard)
+    @Post('request/:id')
+    async acceptRequest(
+        @Req() req: AuthenticatedRequest,
+        @Param('id') requestId: string,
+    ) {
+        console.log("Request ID:", requestId);
+        return this.friendshipService.acceptRequest(requestId,req.user.id);
+    }
+
+    @UseGuards(AuthGuard)
+    @Post('request/:id/reject')
+    async rejectRequest(
+        @Req() req: AuthenticatedRequest,
+        @Param('id') requestId: string,
+    ) {
+        return this.friendshipService.rejectRequest(requestId,req.user.id);
     }
 }

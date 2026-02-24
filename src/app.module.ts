@@ -9,13 +9,18 @@ import { UserController } from './modules/user/user.controller';
 import { UserModule } from './modules/user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
+import { FriendshipModule } from './modules/friendship/friendship.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PassportModule,
-    SocketModule, UserModule, AuthModule, PrismaModule],
+    SocketModule,
+    UserModule,
+    AuthModule,
+    FriendshipModule,
+    PrismaModule,
+  ],
   controllers: [AppController, UserController],
   providers: [AppService, SocketGateway],
 })

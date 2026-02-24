@@ -6,7 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  providers: [FriendshipService,AuthGuard],
-  controllers: [FriendshipController]
+  providers: [FriendshipService, AuthGuard],
+  controllers: [FriendshipController],
 })
 export class FriendshipModule {}

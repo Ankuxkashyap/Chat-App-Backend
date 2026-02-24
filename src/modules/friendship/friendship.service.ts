@@ -62,23 +62,25 @@ export class FriendshipService {
       f.userOneId === userId ? f.userTwo : f.userOne,
     );
   }
-  getFrindRequests(userId: string) {
-        return this.prismaService.friendRequest.findMany({
-        where: {
-            receiverId: userId,
-            status: 'PENDING',
+  async getFriendRequests(userId: string) {
+    const requests = await this.prismaService.friendRequest.findMany({
+      where: {
+        receiverId: userId,
+        status: 'PENDING',
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            username: true,
+          },
         },
-        include: {
-            sender: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    username: true,
-                },
-            },
-        },
-        })
+      },
+    });
+    if (!requests) return [];
+    return requests.map((r) => r.sender);
   }
 
   async sentRequest(senderId: string, receiverId: string) {
@@ -95,65 +97,65 @@ export class FriendshipService {
     }
 
     return this.prismaService.friendRequest.create({
-        data: {
-            senderId,
-            receiverId,
-            status: 'PENDING',
-        }
-    })
+      data: {
+        senderId,
+        receiverId,
+        status: 'PENDING',
+      },
+    });
+  }
+
+  async acceptRequest(requestId: string, userId: string) {
+    const request = await this.prismaService.friendRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.status !== 'PENDING') {
+      throw new ConflictException('Friend request not found');
     }
 
-    async acceptRequest(requestId: string,userId: string) {
-        const request = await this.prismaService.friendRequest.findUnique({
-            where: { id: requestId },
-        })
-
-        if (!request || request.status !== 'PENDING') {
-            throw new ConflictException('Friend request not found');
-        }
-
-        if (request.receiverId !== userId) {
-            throw new ConflictException('Unauthorized action');
-        }
-
-        const existingFriendship = await this.prismaService.friendship.findFirst({
-            where: {
-                userOneId: request.senderId,
-                userTwoId: request.receiverId,
-            },
-        });
-
-        if (existingFriendship) {
-            throw new ConflictException('Friendship already exists');
-        }
-
-        await this.prismaService.friendship.create({
-            data: {
-            userOneId: request.senderId,
-            userTwoId: request.receiverId,
-            },
-        });
-
-        return this.prismaService.friendRequest.delete({
-            where: { id: requestId },
-        });
+    if (request.receiverId !== userId) {
+      throw new ConflictException('Unauthorized action');
     }
 
-    async rejectRequest(requestId: string,userId:string) {
-        const request = await this.prismaService.friendRequest.findUnique({
-            where: { id: requestId },
-        })
+    const existingFriendship = await this.prismaService.friendship.findFirst({
+      where: {
+        userOneId: request.senderId,
+        userTwoId: request.receiverId,
+      },
+    });
 
-        if (!request || request.status !== 'PENDING') {
-            throw new ConflictException('Friend request not found');
-        }
-
-        if (request.receiverId !== userId) {
-            throw new ConflictException('Unauthorized action');
-        }
-        
-        return this.prismaService.friendRequest.delete({
-            where: { id: requestId },
-        });
+    if (existingFriendship) {
+      throw new ConflictException('Friendship already exists');
     }
+
+    await this.prismaService.friendship.create({
+      data: {
+        userOneId: request.senderId,
+        userTwoId: request.receiverId,
+      },
+    });
+
+    return this.prismaService.friendRequest.delete({
+      where: { id: requestId },
+    });
+  }
+
+  async rejectRequest(requestId: string, userId: string) {
+    const request = await this.prismaService.friendRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.status !== 'PENDING') {
+      throw new ConflictException('Friend request not found');
+    }
+
+    if (request.receiverId !== userId) {
+      throw new ConflictException('Unauthorized action');
+    }
+
+    return this.prismaService.friendRequest.delete({
+      where: { id: requestId },
+    });
+  }
 }

@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -63,7 +67,7 @@ export class FriendshipService {
     );
   }
   async getFriendRequests(userId: string) {
-    const requests = await this.prismaService.friendRequest.findMany({
+    return await this.prismaService.friendRequest.findMany({
       where: {
         receiverId: userId,
         status: 'PENDING',
@@ -79,8 +83,6 @@ export class FriendshipService {
         },
       },
     });
-    if (!requests) return [];
-    return requests.map((r) => r.sender);
   }
 
   async sentRequest(senderId: string, receiverId: string) {
@@ -91,6 +93,10 @@ export class FriendshipService {
         status: 'PENDING',
       },
     });
+
+    if (senderId === receiverId) {
+      throw new ConflictException('Cannot send friend request to yourself');
+    }
 
     if (existingRequest) {
       throw new ConflictException('Friend request already sent');
@@ -107,10 +113,14 @@ export class FriendshipService {
 
   async acceptRequest(requestId: string, userId: string) {
     const request = await this.prismaService.friendRequest.findUnique({
-      where: { id: requestId },
+      where: {
+        id: requestId,
+        receiverId: userId,
+        status: 'PENDING',
+      },
     });
 
-    if (!request || request.status !== 'PENDING') {
+    if (!request) {
       throw new ConflictException('Friend request not found');
     }
 
@@ -128,7 +138,6 @@ export class FriendshipService {
     if (existingFriendship) {
       throw new ConflictException('Friendship already exists');
     }
-
     await this.prismaService.friendship.create({
       data: {
         userOneId: request.senderId,
@@ -142,16 +151,18 @@ export class FriendshipService {
   }
 
   async rejectRequest(requestId: string, userId: string) {
-    const request = await this.prismaService.friendRequest.findUnique({
-      where: { id: requestId },
+    const request = await this.prismaService.friendRequest.findFirst({
+      where: {
+        id: requestId,
+        receiverId: userId,
+        status: 'PENDING',
+      },
     });
 
-    if (!request || request.status !== 'PENDING') {
-      throw new ConflictException('Friend request not found');
-    }
-
-    if (request.receiverId !== userId) {
-      throw new ConflictException('Unauthorized action');
+    if (!request) {
+      throw new NotFoundException(
+        'Friend request not found or already handled',
+      );
     }
 
     return this.prismaService.friendRequest.delete({

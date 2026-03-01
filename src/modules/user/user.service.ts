@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface User {
-    name: string;
-    email: string;
-    password: string;
+  name: string;
+  email: string;
+  password: string;
 }
 
 @Injectable()
@@ -48,5 +48,4 @@ export class UserService {
   async findById(id: string) {
     return this.prismaService.user.findUnique({ where: { id } });
   }
-
 }

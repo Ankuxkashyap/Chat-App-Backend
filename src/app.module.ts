@@ -10,6 +10,7 @@ import { UserModule } from './modules/user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { FriendshipModule } from './modules/friendship/friendship.module';
+import { ConversationModule } from './modules/conversation/conversation.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FriendshipModule } from './modules/friendship/friendship.module';
     AuthModule,
     FriendshipModule,
     PrismaModule,
+    ConversationModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, SocketGateway],

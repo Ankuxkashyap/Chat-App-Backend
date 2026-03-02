@@ -37,11 +37,25 @@ export class FriendshipService {
     });
   }
 
-  async getFriends(userId: string) {
+  async getFriends(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const skip = (page - 1) * limit;
+  
+    const total = await this.prismaService.friendship.count({
+      where: {
+        OR: [{ userOneId: userId }, { userTwoId: userId }],
+      },
+    });
+  
     const friendships = await this.prismaService.friendship.findMany({
       where: {
         OR: [{ userOneId: userId }, { userTwoId: userId }],
       },
+      skip,
+      take: limit,
       include: {
         userOne: {
           select: {
@@ -61,10 +75,20 @@ export class FriendshipService {
         },
       },
     });
-
-    return friendships.map((f) =>
+  
+    const friends = friendships.map((f) =>
       f.userOneId === userId ? f.userTwo : f.userOne,
     );
+  
+    return {
+      data: friends,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
   async getFriendRequests(userId: string) {
     return await this.prismaService.friendRequest.findMany({

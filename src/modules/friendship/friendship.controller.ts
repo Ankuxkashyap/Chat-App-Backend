@@ -6,6 +6,8 @@ import {
   Body,
   Get,
   Param,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FriendshipService } from './friendship.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -33,9 +35,12 @@ export class FriendshipController {
 
   @UseGuards(AuthGuard)
   @Get('')
-  async getFriends(@Req() req: AuthenticatedRequest) {
-    const userId = req.user.id;
-    return this.friendshipService.getFriends(userId);
+  getFriends(
+    @Req() req: AuthenticatedRequest,
+    @Query('page', new ParseIntPipe()) page: number,
+    @Query('limit', new ParseIntPipe()) limit: number,
+  ) {
+    return this.friendshipService.getFriends(req.user.id, page, limit);
   }
 
   @UseGuards(AuthGuard)

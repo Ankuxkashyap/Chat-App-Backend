@@ -66,7 +66,6 @@ export class FriendshipController {
     @Req() req: AuthenticatedRequest,
     @Param('id') requestId: string,
   ) {
-    console.log('Request ID:', requestId);
     return this.friendshipService.acceptRequest(requestId, req.user.id);
   }
 

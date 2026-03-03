@@ -11,6 +11,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { FriendshipModule } from './modules/friendship/friendship.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ConversationModule } from './modules/conversation/conversation.module';
     FriendshipModule,
     PrismaModule,
     ConversationModule,
+    MessagesModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, SocketGateway],

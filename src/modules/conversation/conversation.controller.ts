@@ -23,6 +23,16 @@ export class ConversationController {
         return this.conversationService.getConversations(userId);
     }
 
+    @Get(':conversationId')
+    async getConversationById(
+        @Req() req:AuthenticatedRequest,
+        @Param('conversationId') conversationId: string,
+    ) {
+        return this.conversationService.getConversationById(
+            req.user.id,
+            conversationId,
+        );
+    }
     @Post(':targetUserId')
     async createConversation(
         @Req() req: AuthenticatedRequest,

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable,ForbiddenException } from '@nestjs/common';
+import { ConflictException, Injectable,ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -84,6 +84,58 @@ export class ConversationService {
         updatedAt: conversation.updatedAt,
       };
     });
+  }
+  async getConversationById(
+    userId: string,
+    conversationId: string,
+  ) {
+    const conversation =
+      await this.prismaService.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          userOne: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            },
+          },
+          userTwo: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            },
+          },
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+  
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+  
+    if (
+      conversation.userOneId !== userId &&
+      conversation.userTwoId !== userId
+    ) {
+      throw new ForbiddenException(
+        'You are not part of this conversation',
+      );
+    }
+  
+    const otherUser =
+      conversation.userOneId === userId
+        ? conversation.userTwo
+        : conversation.userOne;
+  
+    return {
+      conversationId: conversation.id,
+      user: otherUser,
+      messages: conversation.messages,
+    };
   }
 
 }

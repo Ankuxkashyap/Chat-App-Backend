@@ -42,9 +42,14 @@ export class MessagesService {
             },
         });
 
-        this.chatGateway.server
-            .to(conversationId)
-            .emit('newMessage', message.content);
+        this.chatGateway.emitNewMessage(conversationId, {
+            id: message.id,
+            content: message.content,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
+            createdAt: message.createdAt.toISOString(),
+            updatedAt: message.updatedAt.toISOString(),
+          });
 
         await this.prismaService.conversation.update({
             where: { id: conversationId },

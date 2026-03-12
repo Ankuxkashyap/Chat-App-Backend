@@ -24,57 +24,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     const userId = client.handshake.auth?.userId;
-    console.log('[ChatGateway] handleConnection - clientId:', client.id, '| userId:', userId);
-
-    if (!userId) {
-      console.warn('[ChatGateway] handleConnection - no userId in auth, skipping');
-      return;
-    }
+    if (!userId) return;
 
     if (!this.onlineUsers.has(userId)) {
       this.onlineUsers.set(userId, new Set());
     }
 
     this.onlineUsers.get(userId)!.add(client.id);
-    console.log('[ChatGateway] handleConnection - sockets for user', userId, ':', [...this.onlineUsers.get(userId)!]);
 
     if (this.onlineUsers.get(userId)!.size === 1) {
-      console.log('[ChatGateway] handleConnection - emitting userOnline for:', userId);
       this.server.emit('userOnline', { userId });
-    } else {
-      console.log('[ChatGateway] handleConnection - user already online, not re-emitting userOnline');
     }
-
-    console.log('[ChatGateway] current onlineUsers:', Array.from(this.onlineUsers.keys()));
   }
 
   handleDisconnect(client: Socket) {
     const userId = client.handshake.auth?.userId;
-    console.log('[ChatGateway] handleDisconnect - clientId:', client.id, '| userId:', userId);
-
-    if (!userId) {
-      console.warn('[ChatGateway] handleDisconnect - no userId in auth, skipping');
-      return;
-    }
+    if (!userId) return;
 
     const sockets = this.onlineUsers.get(userId);
-    if (!sockets) {
-      console.warn('[ChatGateway] handleDisconnect - no socket set found for userId:', userId);
-      return;
-    }
+    if (!sockets) return;
 
     sockets.delete(client.id);
-    console.log('[ChatGateway] handleDisconnect - remaining sockets for user', userId, ':', [...sockets]);
 
     if (sockets.size === 0) {
       this.onlineUsers.delete(userId);
-      console.log('[ChatGateway] handleDisconnect - emitting userOffline for:', userId);
       this.server.emit('userOffline', { userId });
-    } else {
-      console.log('[ChatGateway] handleDisconnect - user still has active sockets, not emitting userOffline');
     }
-
-    console.log('[ChatGateway] current onlineUsers:', Array.from(this.onlineUsers.keys()));
   }
 
   getOnlineUsers(): string[] {
@@ -83,9 +58,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('getOnlineUsers')
   handleGetOnlineUsers(@ConnectedSocket() client: Socket) {
-    const users = this.getOnlineUsers();
-    console.log('[ChatGateway] getOnlineUsers - clientId:', client.id, '| returning:', users);
-    client.emit('onlineUsers', users);
+    client.emit('onlineUsers', this.getOnlineUsers());
   }
 
   @SubscribeMessage('joinConversation')
@@ -93,17 +66,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() conversationId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('[ChatGateway] joinConversation - clientId:', client.id, '| conversationId:', conversationId);
     client.join(conversationId);
   }
 
   @SubscribeMessage('leaveConversation')
   handleLeave(
-    @MessageBody() conversationId: string,
+    @MessageBody() data: { conversationId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('[ChatGateway] leaveConversation - clientId:', client.id, '| conversationId:', conversationId);
-    client.leave(conversationId);
+    client.leave(data.conversationId);
+  }
+
+  @SubscribeMessage('typing:start')
+  handleTypingStart(
+    @MessageBody() data: { conversationId: string; userId: string; username: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.to(data.conversationId).emit('typing:start', {
+      userId: data.userId,
+      username: data.username,
+      socketId: client.id,
+    });
+  }
+
+  @SubscribeMessage('typing:stop')
+  handleTypingStop(
+    @MessageBody() data: { conversationId: string; userId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+
+    client.to(data.conversationId).emit('typing:stop', {
+      userId: data.userId,
+      socketId: client.id,
+    });
   }
 
   emitNewMessage(
@@ -117,7 +112,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       updatedAt: string;
     },
   ) {
-    console.log('[ChatGateway] emitNewMessage - conversationId:', conversationId, '| messageId:', message.id);
     this.server.to(conversationId).emit('newMessage', message);
   }
 }

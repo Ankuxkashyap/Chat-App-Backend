@@ -6,11 +6,13 @@ import {
     Param,
     Req,
     UseGuards,
+    Patch,
 } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { AuthenticatedRequest } from 'src/types/auth';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { MessageStatus } from '@prisma/client';
 
 @Controller('messages')
 @UseGuards(AuthGuard)
@@ -22,7 +24,7 @@ export class MessagesController {
     @Post()
     async sendMessage(
         @Req() req: AuthenticatedRequest,
-        @Body() CreateMessageDto:CreateMessageDto
+        @Body() CreateMessageDto: CreateMessageDto
     ) {
         return this.messagesService.createMessage(
             req.user.id,
@@ -39,5 +41,13 @@ export class MessagesController {
             req.user.id,
             conversationId,
         );
+    }
+    @Patch(':messageId')
+    async updateStatus(
+        @Req() req: AuthenticatedRequest,
+        @Param('messageId') msgId: string,
+        @Body('status') status:MessageStatus
+    ) {
+        return this.messagesService.updateMessages(req.user.id,status,msgId)
     }
 }

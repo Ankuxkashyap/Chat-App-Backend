@@ -8,6 +8,8 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { MessagesService } from 'src/modules/messages/messages.service';
+import {MessageStatus} from '@prisma/client'
 
 @WebSocketGateway({
   cors: {
@@ -21,6 +23,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private onlineUsers = new Map<string, Set<string>>();
+  constructor(private readonly messagesService:MessagesService){}
 
   handleConnection(client: Socket) {
     const userId = client.handshake.auth?.userId;
@@ -101,6 +104,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @SubscribeMessage('messageDelivered')
+async handleMessageDelivered(
+  @MessageBody() data: { messageId: string; senderId: string },
+  @ConnectedSocket() client: Socket,
+) {
+  const message = await this.messagesService.updateMessages(
+    data.senderId,
+    MessageStatus.DELIVERED,
+    data.messageId,
+  );
+
+  const senderSockets = this.onlineUsers.get(data.senderId);
+  if (senderSockets) {
+    senderSockets.forEach((socketId) => {
+      this.server.to(socketId).emit('messageStatusUpdated', message);
+    });
+  }
+
+  return message;
+}
+
   emitNewMessage(
     conversationId: string,
     message: {
@@ -108,6 +132,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content: string;
       senderId: string;
       conversationId: string;
+      status:string;
       createdAt: string;
       updatedAt: string;
     },

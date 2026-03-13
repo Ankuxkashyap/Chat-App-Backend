@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../../chat/chat.gateway'
+import {MessageStatus} from '@prisma/client'
 
 @Injectable()
 export class MessagesService {
@@ -47,9 +48,10 @@ export class MessagesService {
             content: message.content,
             senderId: message.senderId,
             conversationId: message.conversationId,
+            status:message.status,
             createdAt: message.createdAt.toISOString(),
             updatedAt: message.updatedAt.toISOString(),
-          });
+        });
 
         await this.prismaService.conversation.update({
             where: { id: conversationId },
@@ -82,5 +84,26 @@ export class MessagesService {
             where: { conversationId },
             orderBy: { createdAt: 'asc' },
         });
+    }
+    async updateMessages(
+        userId:string,
+        status: MessageStatus,
+        messageId: string
+    ) {
+
+        const message = await this.prismaService.message.findUnique({
+            where:{
+                id: messageId
+            }
+        }) 
+        if(message?.senderId !== userId){
+            throw new ForbiddenException('You not Sender');
+        }
+        const message2 = await this.prismaService.message.update({
+            where: { id: messageId },
+            data:{
+                status:status
+            }
+        })
     }
 }

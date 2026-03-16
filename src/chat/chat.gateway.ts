@@ -8,8 +8,8 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { MessagesService } from 'src/modules/messages/messages.service';
-import {MessageStatus} from '@prisma/client'
+import { PrismaService } from '../modules/prisma/prisma.service';
+import { MessageStatus } from '@prisma/client';
 
 @WebSocketGateway({
   cors: {
@@ -23,16 +23,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private onlineUsers = new Map<string, Set<string>>();
-  constructor(private readonly messagesService:MessagesService){}
+
+  constructor(private readonly prismaService: PrismaService) {}
 
   handleConnection(client: Socket) {
-    const userId = client.handshake.auth?.userId;
+    const userId = client.handshake.auth?.userId as string | undefined;
     if (!userId) return;
 
     if (!this.onlineUsers.has(userId)) {
       this.onlineUsers.set(userId, new Set());
     }
-
     this.onlineUsers.get(userId)!.add(client.id);
 
     if (this.onlineUsers.get(userId)!.size === 1) {
@@ -41,7 +41,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.handshake.auth?.userId;
+    const userId = client.handshake.auth?.userId as string | undefined;
     if (!userId) return;
 
     const sockets = this.onlineUsers.get(userId);
@@ -82,7 +82,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('typing:start')
   handleTypingStart(
-    @MessageBody() data: { conversationId: string; userId: string; username: string },
+    @MessageBody()
+    data: { conversationId: string; userId: string; username: string },
     @ConnectedSocket() client: Socket,
   ) {
     client.to(data.conversationId).emit('typing:start', {
@@ -97,7 +98,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string; userId: string },
     @ConnectedSocket() client: Socket,
   ) {
-
     client.to(data.conversationId).emit('typing:stop', {
       userId: data.userId,
       socketId: client.id,
@@ -105,25 +105,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('messageDelivered')
-async handleMessageDelivered(
-  @MessageBody() data: { messageId: string; senderId: string },
-  @ConnectedSocket() client: Socket,
-) {
-  const message = await this.messagesService.updateMessages(
-    data.senderId,
-    MessageStatus.DELIVERED,
-    data.messageId,
-  );
-
-  const senderSockets = this.onlineUsers.get(data.senderId);
-  if (senderSockets) {
-    senderSockets.forEach((socketId) => {
-      this.server.to(socketId).emit('messageStatusUpdated', message);
+  async handleMessageDelivered(
+    @MessageBody() data: { messageId: string; senderId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const message = await this.prismaService.message.update({
+      where: { id: data.messageId },
+      data: { status: MessageStatus.DELIVERED },
     });
-  }
 
-  return message;
-}
+    const senderSockets = this.onlineUsers.get(data.senderId);
+    if (senderSockets) {
+      senderSockets.forEach((socketId) => {
+        this.server.to(socketId).emit('messageStatusUpdated', message);
+      });
+    }
+
+    return message;
+  }
 
   emitNewMessage(
     conversationId: string,
@@ -132,7 +131,7 @@ async handleMessageDelivered(
       content: string;
       senderId: string;
       conversationId: string;
-      status:string;
+      status: string;
       createdAt: string;
       updatedAt: string;
     },

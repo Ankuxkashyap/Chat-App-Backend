@@ -1,14 +1,16 @@
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 
 export class UserRegisterDto {
-    @IsString()
-    @MinLength(6, {message: 'Password must be at least 6 characters long'})
-    password: string;
-    
-    @IsEmail()
-    email: string;
-    
-    @IsString()
-    @MinLength(3,{message: 'Username must be at least 3 characters long'})
-    name: string;
+  @IsString()
+  @MinLength(2)
+  @MaxLength(50)
+  name: string;
+
+  @IsEmail({}, { message: 'Invalid email address' })
+  email: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
+  @MaxLength(64)
+  password: string;
 }

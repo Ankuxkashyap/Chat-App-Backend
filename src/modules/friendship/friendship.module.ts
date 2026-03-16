@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { FriendshipService } from './friendship.service';
 import { FriendshipController } from './friendship.controller';
-import { AuthGuard } from '../auth/auth.guard';
+import { FriendshipService } from './friendship.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule],
-  providers: [FriendshipService, AuthGuard],
+  imports: [PrismaModule, AuthModule],
   controllers: [FriendshipController],
+  providers: [FriendshipService],
 })
 export class FriendshipModule {}

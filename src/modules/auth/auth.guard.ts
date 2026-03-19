@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestT>();
-    const token = this.extractToken(request.headers);
+    const token = this.extractToken(request);
 
     if (!token) {
       throw new UnauthorizedException('No token provided');
@@ -31,11 +31,11 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractToken(headers: IncomingHttpHeaders): string | null {
-    const authHeader = headers['authorization'];
-    if (typeof authHeader !== 'string') return null;
-    if (!authHeader.startsWith('Bearer ')) return null;
-    return authHeader.split(' ')[1] ?? null;
+  private extractToken(request:RequestT): string | null {
+    if (request.cookies?.access_token) {
+      return request.cookies.access_token;
+    }
+    return null;
   }
 
   private async verifyToken(token: string): Promise<JwtPayload> {

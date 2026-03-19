@@ -24,6 +24,13 @@ const REFRESH_COOKIE_OPTIONS: CookieOptions = {
   sameSite: 'strict',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
+const ACCESSTOKEN_COOKIE_OPTIONS: CookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 30 * 60 * 1000,
+};
+
 
 @Controller('auth')
 export class AuthController {
@@ -51,6 +58,7 @@ export class AuthController {
       await this.authService.login(dto);
 
     res.cookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTIONS);
+    res.cookie('access_token', accessToken, ACCESSTOKEN_COOKIE_OPTIONS);
     res.json({ user, accessToken });
   }
 
@@ -77,6 +85,7 @@ export class AuthController {
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refresh(decoded.sub, refreshToken);
 
+    res.cookie('refresh_token', newRefreshToken, REFRESH_COOKIE_OPTIONS);
     res.cookie('refresh_token', newRefreshToken, REFRESH_COOKIE_OPTIONS);
     res.json({ accessToken });
   }

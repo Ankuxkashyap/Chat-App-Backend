@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import bcrypt from 'bcrypt';
@@ -98,6 +99,9 @@ export class AuthService {
     if (!user) {
       throw new ConflictException('Invalid email or password');
     }
+    if (!user.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
@@ -149,5 +153,50 @@ export class AuthService {
       where: { id: userId },
       data: { refreshToken: null },
     });
+  }
+  async googleLogin(dto: {
+    googleId: string;
+    email: string;
+    name: string;
+    avatar?: string;
+  }) {
+    let user = await this.prismaService.user.findFirst({
+      where: {
+        OR: [{ googleId: dto.googleId }, { email: dto.email }],
+      },
+    });
+
+    if (!user) {
+      const baseUsername = dto.email.split('@')[0].toLowerCase();
+      let username = baseUsername;
+      let count = 0;
+      while (
+        await this.prismaService.user.findUnique({ where: { username } })
+      ) {
+        username = `${baseUsername}${++count}`;
+      }
+
+      user = await this.prismaService.user.create({
+        data: {
+          googleId: dto.googleId,
+          email: dto.email,
+          name: dto.name,
+          avatar: dto.avatar,
+          username,
+        },
+      });
+      console.log('Google profile:', user);
+    } else if (!user.googleId) {
+      user = await this.prismaService.user.update({
+        where: { id: user.id },
+        data: { googleId: dto.googleId, avatar: dto.avatar },
+      });
+    }
+
+    const accessToken = this.generateAccessToken(user.id, user.email);
+    const refreshToken = this.generateRefreshToken(user.id, user.email);
+    await this.saveRefreshToken(user.id, refreshToken);
+
+    return { user: this.buildAuthUser(user), accessToken, refreshToken };
   }
 }

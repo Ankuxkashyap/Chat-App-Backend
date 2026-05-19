@@ -1,9 +1,15 @@
-import { ConflictException, Injectable,ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MessageStatus } from '@prisma/client';
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly prismaService: PrismaService) { }
+  constructor(private readonly prismaService: PrismaService) {}
 
   async createConversation(userOneId: string, targetUserId: string) {
     if (userOneId === targetUserId) {
@@ -17,7 +23,7 @@ export class ConversationService {
         ],
       },
     });
-  
+
     if (!friendship) {
       throw new ForbiddenException('You are not friends');
     }
@@ -30,9 +36,9 @@ export class ConversationService {
       },
     });
 
-    if (existing){
-      throw new ConflictException("Conversation Already exists")
-    };
+    if (existing) {
+      throw new ConflictException('Conversation Already exists');
+    }
 
     return this.prismaService.conversation.create({
       data: {
@@ -65,6 +71,16 @@ export class ConversationService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                senderId: { not: userId },
+                status: { not: MessageStatus.SEEN },
+              },
+            },
+          },
+        },
       },
       orderBy: {
         updatedAt: 'desc',
@@ -81,61 +97,56 @@ export class ConversationService {
         conversationId: conversation.id,
         user: otherUser,
         lastMessage: conversation.messages[0] || null,
+        unreadCount: conversation._count.messages,
         updatedAt: conversation.updatedAt,
       };
     });
   }
-  async getConversationById(
-    userId: string,
-    conversationId: string,
-  ) {
-    const conversation =
-      await this.prismaService.conversation.findUnique({
-        where: { id: conversationId },
-        include: {
-          userOne: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-            },
-          },
-          userTwo: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-            },
-          },
-          messages: {
-            orderBy: { createdAt: 'asc' },
+
+  async getConversationById(userId: string, conversationId: string) {
+    const conversation = await this.prismaService.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        userOne: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
           },
         },
-      });
-  
+        userTwo: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
-  
+
     if (
       conversation.userOneId !== userId &&
       conversation.userTwoId !== userId
     ) {
-      throw new ForbiddenException(
-        'You are not part of this conversation',
-      );
+      throw new ForbiddenException('You are not part of this conversation');
     }
-  
+
     const otherUser =
       conversation.userOneId === userId
         ? conversation.userTwo
         : conversation.userOne;
-  
+
     return {
       conversationId: conversation.id,
       user: otherUser,
       messages: conversation.messages,
     };
   }
-
 }

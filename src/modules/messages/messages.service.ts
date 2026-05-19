@@ -50,6 +50,26 @@ export class MessagesService {
       updatedAt: message.updatedAt.toISOString(),
     });
 
+    // new emit for conversation update (lastMessage and updatedAt)
+    const recipientId =
+      conversation.userOneId === senderId
+        ? conversation.userTwoId
+        : conversation.userOneId;
+
+    this.chatGateway.emitConversationUpdated([senderId, recipientId], {
+      conversationId,
+      lastMessage: {
+        id: message.id,
+        content: message.content,
+        senderId: message.senderId,
+        conversationId: message.conversationId,
+        status: message.status,
+        createdAt: message.createdAt.toISOString(),
+        updatedAt: message.updatedAt.toISOString(),
+      },
+      updatedAt: message.updatedAt.toISOString(),
+    });
+
     await this.prismaService.conversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },

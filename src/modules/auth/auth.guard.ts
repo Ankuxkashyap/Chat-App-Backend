@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import type { IncomingHttpHeaders } from 'http';
 import type { AuthUser, JwtPayload, RequestT } from './types/auth';
 
 @Injectable()
@@ -31,7 +30,7 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractToken(request:RequestT): string | null {
+  private extractToken(request: RequestT): string | null {
     if (request.cookies?.access_token) {
       return request.cookies.access_token;
     }

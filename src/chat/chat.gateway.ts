@@ -123,7 +123,57 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     return message;
   }
+  @SubscribeMessage('markAsSeen')
+  async handleMarkAsSeen(
+    @MessageBody() data: { messageIds: string[]; senderId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!data.messageIds?.length) return;
 
+    const updated = await this.withRetry(() =>
+      this.prismaService.message.updateMany({
+        where: {
+          id: { in: data.messageIds },
+          status: { not: MessageStatus.SEEN }, // skip already-seen
+        },
+        data: { status: MessageStatus.SEEN },
+      }),
+    );
+
+    // Notify the original sender once for all seen messages
+    const senderSockets = this.onlineUsers.get(data.senderId);
+    if (senderSockets) {
+      senderSockets.forEach((socketId) => {
+        this.server.to(socketId).emit('messagesSeenBatch', {
+          messageIds: data.messageIds,
+          status: MessageStatus.SEEN,
+        });
+      });
+    }
+
+    return updated;
+  }
+
+  // ── Add this private helper inside your ChatGateway class ─────────────────────
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delay = 100,
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        const isDeadlock = err?.code === 'P2034';
+        if (isDeadlock && attempt < retries) {
+          await new Promise((res) => setTimeout(res, delay * 2 ** attempt));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error('withRetry: unreachable');
+  }
   emitNewMessage(
     conversationId: string,
     message: {
@@ -137,5 +187,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ) {
     this.server.to(conversationId).emit('newMessage', message);
+  }
+  emitConversationUpdated(
+    recipientUserIds: string[],
+    payload: {
+      conversationId: string;
+      lastMessage: {
+        id: string;
+        content: string;
+        senderId: string;
+        conversationId: string;
+        status: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+      updatedAt: string;
+    },
+  ) {
+    recipientUserIds.forEach((userId) => {
+      const sockets = this.onlineUsers.get(userId);
+      if (sockets) {
+        sockets.forEach((socketId) => {
+          this.server.to(socketId).emit('conversation_updated', payload);
+        });
+      }
+    });
   }
 }

@@ -17,6 +17,7 @@ import { UserLoginDto } from './dto/UserLoginDto';
 import { UserRegisterDto } from './dto/UserRegisterDto';
 import type { JwtPayload, RequestT } from './types/auth';
 import type { CookieOptions } from 'express';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 
 const REFRESH_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
@@ -30,7 +31,6 @@ const ACCESSTOKEN_COOKIE_OPTIONS: CookieOptions = {
   sameSite: 'strict',
   maxAge: 30 * 60 * 1000,
 };
-
 
 @Controller('auth')
 export class AuthController {
@@ -86,7 +86,7 @@ export class AuthController {
       await this.authService.refresh(decoded.sub, refreshToken);
 
     res.cookie('refresh_token', newRefreshToken, REFRESH_COOKIE_OPTIONS);
-    res.cookie('refresh_token', newRefreshToken, REFRESH_COOKIE_OPTIONS);
+    res.cookie('access_token', accessToken, ACCESSTOKEN_COOKIE_OPTIONS);
     res.json({ accessToken });
   }
 
@@ -103,5 +103,25 @@ export class AuthController {
   @UseGuards(AuthGuard)
   profile(@Req() req: RequestT): { user: RequestT['user'] } {
     return { user: req.user };
+  }
+
+  @Get('google')
+  @UseGuards(PassportAuthGuard('google'))
+  googleAuth() {}
+
+  @Get('google/callback')
+  @UseGuards(PassportAuthGuard('google'))
+  async googleCallback(@Req() req, @Res() res: Response) {
+    if (!req.user) {
+      return res.redirect('http://localhost:3000/auth?error=google_failed');
+    }
+    const { user, accessToken, refreshToken } =
+      await this.authService.googleLogin(req.user);
+
+    res.cookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTIONS);
+    res.cookie('access_token', accessToken, ACCESSTOKEN_COOKIE_OPTIONS);
+    // res.json({ user, accessToken });
+
+    return res.redirect('http://localhost:3000/auth/callback');
   }
 }

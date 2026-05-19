@@ -16,6 +16,6 @@ export type JwtPayload = {
 
 export interface RequestT extends Request {
   user: AuthUser;
-  access_token:string;
-  refresh_token:string;
+  access_token: string;
+  refresh_token: string;
 }

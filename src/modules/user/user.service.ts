@@ -45,6 +45,21 @@ export class UserService {
     return this.prismaService.user.findUnique({ where: { username } });
   }
 
+  async searchUsers(userId: string, searchTerm: string) {
+    
+    const users = await this.prismaService.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: searchTerm, mode: 'insensitive' } },
+          { email: { contains: searchTerm, mode: 'insensitive' } },
+          { username: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      },
+    });
+    
+    return users;
+  }
+
   async findById(id: string) {
     return this.prismaService.user.findUnique({ where: { id } });
   }

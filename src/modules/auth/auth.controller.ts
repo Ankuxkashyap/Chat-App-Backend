@@ -22,13 +22,13 @@ import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 const REFRESH_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: 'none',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 const ACCESSTOKEN_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: 'none',
   maxAge: 30 * 60 * 1000,
 };
 

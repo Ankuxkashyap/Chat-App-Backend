@@ -18,16 +18,10 @@ async function bootstrap() {
     }),
   );
 
-  const allowedOrigins = (
-    process.env.ALLOWED_ORIGINS || 'http://localhost:3000'
-  )
-    .split(',')
-    .map((o) => o.trim());
-
-  console.log('CORS enabled for:', allowedOrigins);
+  console.log('CORS enabled for:', process.env.ALLOWED_ORIGINS);
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: process.env.ALLOWED_ORIGINS,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

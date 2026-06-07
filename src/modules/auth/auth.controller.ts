@@ -122,6 +122,6 @@ export class AuthController {
     res.cookie('access_token', accessToken, ACCESSTOKEN_COOKIE_OPTIONS);
     // res.json({ user, accessToken });
 
-    return res.redirect('http://localhost:3000/auth/callback');
+    return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   }
 }

@@ -13,9 +13,7 @@ import { MessageStatus } from '@prisma/client';
 
 @WebSocketGateway({
   cors: {
-    origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
-      .split(',')
-      .map((o) => o.trim()),
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true,
   },

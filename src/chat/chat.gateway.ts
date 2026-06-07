@@ -19,7 +19,7 @@ import { MessageStatus } from '@prisma/client';
     methods: ['GET', 'POST'],
     credentials: true,
   },
-  // transports: ['websocket', 'polling'],
+  transports: ['websocket', 'polling'],
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()

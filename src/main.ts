@@ -21,7 +21,8 @@ async function bootstrap() {
   console.log('CORS enabled for:', process.env.ALLOWED_ORIGINS);
 
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS,
+    origin: true,
+    // origin: process.env.ALLOWED_ORIGINS,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
